@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IA con Claude · Simulador</title>
+  <style>
+    :root {
+      --black: #050505;
+      --black-2: #0d0d12;
+      --panel: #111118;
+      --panel-2: #181824;
+      --white: #ffffff;
+      --muted: #b8b8c7;
+      --line: rgba(255, 255, 255, .12);
+      --purple: #8b5cf6;
+      --purple-2: #a855f7;
+      --blue: #3b82f6;
+      --soft-purple: rgba(139, 92, 246, .16);
+      --soft-blue: rgba(59, 130, 246, .16);
+      --radius: 22px;
+      --font: Inter, Montserrat, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: var(--font);
+      color: var(--white);
+      background:
+        radial-gradient(circle at 18% 8%, rgba(139, 92, 246, .24), transparent 26%),
+        radial-gradient(circle at 82% 18%, rgba(59, 130, 246, .18), transparent 22%),
+        var(--black);
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background-image:
+        radial-gradient(circle, rgba(139, 92, 246, .9) 0 3px, transparent 4px),
+        radial-gradient(circle, rgba(59, 130, 246, .7) 0 2px, transparent 4px);
+      background-size: 38px 38px, 52px 52px;
+      background-position: 0 0, 14px 20px;
+      opacity: .16;
+      filter: blur(.2px);
+      mask-image: linear-gradient(180deg, black 0%, transparent 62%);
+      z-index: -1;
+    }
+
+    .container {
+      width: min(1120px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 42px 0 56px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      gap: 28px;
+      align-items: stretch;
+      margin-bottom: 28px;
+    }
+
+    .hero-card,
+    .visual-card,
+    .card,
+    .step,
+    .note {
+      background: rgba(17, 17, 24, .86);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, .32);
+      backdrop-filter: blur(10px);
+    }
+
+    .hero-card {
+      padding: 38px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 330px;
+    }
+
+    .badge {
+      display: inline-flex;
+      width: fit-content;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 13px;
+      border: 1px solid rgba(139, 92, 246, .42);
+      color: #d7c8ff;
+      background: var(--soft-purple);
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .badge-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 18px var(--purple);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(42px, 7vw, 82px);
+      line-height: .94;
+      letter-spacing: -.06em;
+      font-weight: 900;
+    }
+
+    .underline {
+      width: min(360px, 100%);
+      height: 6px;
+      background: linear-gradient(90deg, var(--purple), var(--blue));
+      margin: 20px 0 0;
+      border-radius: 999px;
+    }
+
+    .hero-card p {
+      max-width: 720px;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.55;
+      margin: 22px 0 0;
+    }
+
+    .visual-card {
+      position: relative;
+      min-height: 330px;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(0, 0, 0, .16), rgba(0, 0, 0, .72)),
+        #09090f;
+    }
+
+    .visual-card::before {
+      content: "";
+      position: absolute;
+      inset: -20px;
+      background-image:
+        radial-gradient(circle, rgba(139, 92, 246, 1) 0 5px, rgba(139, 92, 246, .24) 7px, transparent 13px),
+        radial-gradient(circle, rgba(59, 130, 246, .9) 0 4px, rgba(59, 130, 246, .22) 7px, transparent 12px);
+      background-size: 42px 42px, 56px 56px;
+      background-position: 0 0, 16px 24px;
+      opacity: .58;
+      filter: blur(.35px);
+    }
+
+    .visual-card::after {
+      content: "IA";
+      position: absolute;
+      right: 28px;
+      bottom: 18px;
+      font-size: clamp(90px, 14vw, 170px);
+      line-height: 1;
+      font-weight: 900;
+      letter-spacing: -.08em;
+      color: rgba(255, 255, 255, .08);
+    }
+
+    .simulator {
+      display: grid;
+      grid-template-columns: .9fr 1.1fr;
+      gap: 24px;
+    }
+
+    .card {
+      padding: 26px;
+    }
+
+    .label {
+      display: block;
+      color: #cdbdff;
+      font-size: 13px;
+      font-weight: 850;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 30px;
+      line-height: 1.05;
+      letter-spacing: -.04em;
+    }
+
+    .small {
+      color: var(--muted);
+      line-height: 1.52;
+      margin: 0 0 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 800;
+      margin-bottom: 9px;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 128px;
+      resize: vertical;
+      border: 1px solid rgba(255, 255, 255, .16);
+      outline: none;
+      border-radius: 18px;
+      background: #07070c;
+      color: var(--white);
+      padding: 16px;
+      font: 750 21px/1.35 var(--font);
+      transition: border-color .2s ease, box-shadow .2s ease;
+    }
+
+    textarea:focus {
+      border-color: rgba(139, 92, 246, .75);
+      box-shadow: 0 0 0 5px rgba(139, 92, 246, .16);
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin: 15px 0 20px;
+    }
+
+    button {
+      border: 0;
+      cursor: pointer;
+      font-family: var(--font);
+      font-weight: 850;
+      transition: transform .18s ease, opacity .18s ease, background .18s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: .6;
+      cursor: wait;
+      transform: none;
+    }
+
+    .chip {
+      color: var(--white);
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 999px;
+      padding: 9px 12px;
+    }
+
+    .chip:hover {
+      background: rgba(139, 92, 246, .22);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .primary {
+      background: linear-gradient(90deg, var(--purple), var(--blue));
+      color: var(--white);
+      border-radius: 14px;
+      padding: 14px 18px;
+      box-shadow: 0 12px 30px rgba(139, 92, 246, .26);
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, .10);
+      color: var(--white);
+      border: 1px solid rgba(255, 255, 255, .13);
+      border-radius: 14px;
+      padding: 13px 16px;
+    }
+
+    .ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid rgba(255, 255, 255, .12);
+      border-radius: 14px;
+      padding: 13px 16px;
+    }
+
+    .top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .status {
+      white-space: nowrap;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      padding: 8px 10px;
+      border-radius: 999px;
+      background: var(--soft-purple);
+      color: #d7c8ff;
+      border: 1px solid rgba(139, 92, 246, .28);
+    }
+
+    .prob-list {
+      display: grid;
+      gap: 10px;
+      min-height: 280px;
+    }
+
+    .empty {
+      min-height: 150px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed rgba(255, 255, 255, .16);
+      border-radius: 18px;
+      padding: 20px;
+    }
+
+    .prob-row {
+      display: grid;
+      grid-template-columns: 100px 1fr 52px;
+      gap: 12px;
+      align-items: center;
+      padding: 13px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .045);
+      border: 1px solid rgba(255, 255, 255, .10);
+      opacity: 0;
+      transform: translateY(8px);
+      animation: appear .34s ease forwards;
+    }
+
+    .prob-row.selected {
+      background: rgba(139, 92, 246, .13);
+      border-color: rgba(139, 92, 246, .55);
+    }
+
+    .word {
+      font-weight: 900;
+    }
+
+    .bar-track {
+      height: 11px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .11);
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--purple), var(--blue));
+      transition: width .7s ease;
+    }
+
+    .percent {
+      text-align: right;
+      color: var(--muted);
+      font-weight: 850;
+      font-size: 13px;
+    }
+
+    .response-box {
+      margin-top: 22px;
+      padding: 22px;
+      border-radius: 20px;
+      background: #07070c;
+      border: 1px solid rgba(255, 255, 255, .12);
+    }
+
+    .response-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 13px;
+    }
+
+    .response-title h3 {
+      margin: 0;
+      font-size: 14px;
+      letter-spacing: .11em;
+      text-transform: uppercase;
+      color: #d7c8ff;
+    }
+
+    .response-title span {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--purple);
+      box-shadow: 0 0 20px var(--purple);
+    }
+
+    .response-text {
+      min-height: 88px;
+      margin: 0;
+      font-size: clamp(23px, 3vw, 34px);
+      line-height: 1.25;
+      letter-spacing: -.04em;
+      font-weight: 900;
+    }
+
+    .token {
+      display: inline-block;
+      margin-right: .30em;
+      opacity: 0;
+      transform: translateY(7px);
+      animation: tokenIn .22s ease forwards;
+    }
+
+    .token:last-child {
+      margin-right: 0;
+    }
+
+    .explain {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 14px 0 0;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .step {
+      padding: 18px;
+      min-height: 135px;
+      transition: border-color .22s ease, background .22s ease, transform .22s ease;
+    }
+
+    .step.active {
+      border-color: rgba(139, 92, 246, .62);
+      background: rgba(139, 92, 246, .14);
+      transform: translateY(-3px);
+    }
+
+    .step small {
+      display: block;
+      color: #cdbdff;
+      font-weight: 900;
+      margin-bottom: 18px;
+    }
+
+    .step strong {
+      display: block;
+      font-size: 17px;
+      margin-bottom: 6px;
+    }
+
+    .step p {
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.4;
+      margin: 0;
+    }
+
+    .note {
+      margin-top: 24px;
+      padding: 24px;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    .note strong {
+      color: var(--white);
+    }
+
+    @keyframes appear {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes tokenIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 920px) {
+
+      .hero,
+      .simulator {
+        grid-template-columns: 1fr;
+      }
+
+      .visual-card {
+        min-height: 220px;
+      }
+
+      .steps {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width: 560px) {
+      .container {
+        width: min(100% - 24px, 1120px);
+        padding-top: 24px;
+      }
+
+      .hero-card,
+      .card,
+      .note {
+        padding: 20px;
+      }
+
+      .prob-row {
+        grid-template-columns: 1fr;
+      }
+
+      .percent {
+        text-align: left;
+      }
+
+      .steps {
+        grid-template-columns: 1fr;
+      }
+
+      textarea {
+        font-size: 18px;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="container">
+    <section class="hero">
+      <div class="hero-card">
+        <h1>IA con Claude</h1>
+        <div class="underline"></div>
+        <p>
+          Un simulador simple para ver cómo una IA generativa puede elegir próximas palabras según probabilidades.
+        </p>
+      </div>
+    </section>
+
+    <section class="simulator">
+      <div class="card">
+        <span class="label">Entrada</span>
+        <h2>Escribí un prompt</h2>
+        <p class="small">
+          Probá una frase breve. El simulador calculará posibles continuaciones y generará una respuesta diferente cada
+          vez.
+        </p>
+
+        <label for="promptInput">Inicio de la frase</label>
+        <textarea id="promptInput" spellcheck="false">Hoy el cielo está</textarea>
+
+        <div class="chips">
+          <button class="chip" type="button" data-example="Hoy el cielo está">Hoy el cielo está</button>
+          <button class="chip" type="button" data-example="El café estaba">El café estaba</button>
+          <button class="chip" type="button" data-example="La reunión fue">La reunión fue</button>
+          <button class="chip" type="button" data-example="El cliente quedó">El cliente quedó</button>
+        </div>
+
+        <div class="actions">
+          <button class="primary" type="button" id="simulateBtn">Simular</button>
+          <button class="secondary" type="button" id="regenerateBtn">Generar otra respuesta</button>
+          <button class="ghost" type="button" id="clearBtn">Limpiar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="top">
+          <div>
+            <span class="label">Salida</span>
+            <h2>Probabilidades</h2>
+          </div>
+          <div class="status" id="statusPill">Esperando</div>
+        </div>
+
+        <div class="prob-list" id="probList">
+          <div class="empty">Hacé clic en <strong>Simular</strong> para ver las palabras más probables.</div>
+        </div>
+
+        <div class="response-box">
+          <div class="response-title">
+            <h3>Respuesta generada</h3>
+            <span></span>
+          </div>
+          <p class="response-text" id="responseText">La respuesta aparecerá acá, palabra por palabra.</p>
+          <p class="explain">
+            La IA no recupera una respuesta fija: selecciona una continuidad probable.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="steps">
+      <article class="step" data-step="0">
+        <small>01</small>
+        <strong>Prompt</strong>
+        <p>La IA recibe el texto inicial.</p>
+      </article>
+      <article class="step" data-step="1">
+        <small>02</small>
+        <strong>Patrones</strong>
+        <p>Analiza relaciones posibles.</p>
+      </article>
+      <article class="step" data-step="2">
+        <small>03</small>
+        <strong>Probabilidad</strong>
+        <p>Ordena próximas palabras.</p>
+      </article>
+      <article class="step" data-step="3">
+        <small>04</small>
+        <strong>Respuesta</strong>
+        <p>Construye una salida palabra por palabra.</p>
+      </article>
+    </section>
+
+    <section class="note">
+      <strong>Idea clave:</strong> este simulador simplifica el funcionamiento real de una IA, pero muestra el punto
+      central: la respuesta se genera por probabilidades y puede variar ante el mismo prompt.
+    </section>
+  </main>
+
+  <script>
+    const promptInput = document.getElementById("promptInput");
+    const simulateBtn = document.getElementById("simulateBtn");
+    const regenerateBtn = document.getElementById("regenerateBtn");
+    const clearBtn = document.getElementById("clearBtn");
+    const probList = document.getElementById("probList");
+    const responseText = document.getElementById("responseText");
+    const statusPill = document.getElementById("statusPill");
+    const steps = [...document.querySelectorAll(".step")];
+
+    const datasets = [
+      {
+        match: ["cielo", "clima", "día", "dia"],
+        next: [
+          { word: "claro", p: 34, continuations: ["y luminoso, ideal para salir a caminar."] },
+          { word: "nublado", p: 26, continuations: ["pero todavía se siente agradable."] },
+          { word: "azul", p: 18, continuations: ["con algunas nubes suaves en el horizonte."] },
+          { word: "gris", p: 14, continuations: ["y parece que podría llover más tarde."] },
+          { word: "despejado", p: 8, continuations: ["desde temprano, con buena visibilidad."] }
+        ]
+      },
+      {
+        match: ["café", "cafe", "bebida"],
+        next: [
+          { word: "caliente", p: 31, continuations: ["y tenía un aroma intenso."] },
+          { word: "amargo", p: 24, continuations: ["pero despertaba el cuerpo al primer sorbo."] },
+          { word: "suave", p: 19, continuations: ["con un sabor equilibrado y agradable."] },
+          { word: "frío", p: 15, continuations: ["porque lo dejaron demasiado tiempo en la mesa."] },
+          { word: "perfecto", p: 11, continuations: ["para empezar la mañana con energía."] }
+        ]
+      },
+      {
+        match: ["reunión", "reunion", "junta", "encuentro"],
+        next: [
+          { word: "productiva", p: 33, continuations: ["porque el equipo salió con próximos pasos claros."] },
+          { word: "larga", p: 23, continuations: ["pero permitió resolver temas importantes."] },
+          { word: "intensa", p: 18, continuations: ["y dejó varias decisiones para revisar."] },
+          { word: "clara", p: 15, continuations: ["desde el inicio hasta el cierre."] },
+          { word: "necesaria", p: 11, continuations: ["para alinear expectativas entre todos."] }
+        ]
+      },
+      {
+        match: ["cliente", "usuario", "comprador"],
+        next: [
+          { word: "satisfecho", p: 35, continuations: ["con la propuesta y pidió avanzar con el proyecto."] },
+          { word: "interesado", p: 25, continuations: ["pero solicitó más detalles antes de decidir."] },
+          { word: "convencido", p: 17, continuations: ["después de ver los resultados esperados."] },
+          { word: "dudando", p: 13, continuations: ["por el presupuesto y los tiempos de implementación."] },
+          { word: "tranquilo", p: 10, continuations: ["al entender mejor el alcance del servicio."] }
+        ]
+      }
+    ];
+
+    const fallback = [
+      { word: "claro", p: 27, continuations: ["y fácil de entender para cualquier persona."] },
+      { word: "interesante", p: 23, continuations: ["porque abre posibilidades nuevas."] },
+      { word: "importante", p: 20, continuations: ["para tomar mejores decisiones."] },
+      { word: "posible", p: 17, continuations: ["si se define bien el objetivo desde el inicio."] },
+      { word: "necesario", p: 13, continuations: ["para avanzar con más criterio."] }
+    ];
+
+    function normalize(text) {
+      return text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    }
+
+    function getCandidates(prompt) {
+      const normalized = normalize(prompt);
+      const dataset = datasets.find(item =>
+        item.match.some(keyword => normalized.includes(normalize(keyword)))
+      );
+      return dataset ? dataset.next : fallback;
+    }
+
+    function weightedPick(candidates) {
+      const total = candidates.reduce((sum, item) => sum + item.p, 0);
+      let value = Math.random() * total;
+
+      for (const item of candidates) {
+        value -= item.p;
+        if (value <= 0) return item;
+      }
+
+      return candidates[candidates.length - 1];
+    }
+
+    function wait(ms) {
+      return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function setActiveStep(index) {
+      steps.forEach((step, i) => step.classList.toggle("active", i === index));
+    }
+
+    function renderProbabilities(candidates, selectedWord) {
+      probList.innerHTML = "";
+
+      candidates.forEach((candidate, index) => {
+        const row = document.createElement("div");
+        row.className = "prob-row";
+        if (candidate.word === selectedWord) row.classList.add("selected");
+        row.style.animationDelay = `${index * 70}ms`;
+
+        row.innerHTML = `
+          <div class="word">${candidate.word}</div>
+          <div class="bar-track"><div class="bar-fill"></div></div>
+          <div class="percent">${candidate.p}%</div>
+        `;
+
+        probList.appendChild(row);
+
+        window.setTimeout(() => {
+          row.querySelector(".bar-fill").style.width = `${candidate.p}%`;
+        }, 90 + index * 70);
+      });
+    }
+
+    async function typeResponse(text) {
+      responseText.innerHTML = "";
+      const words = text.split(/\s+/).filter(Boolean);
+
+      for (const word of words) {
+        const span = document.createElement("span");
+        span.className = "token";
+        span.textContent = word;
+        responseText.appendChild(span);
+        await wait(75);
+      }
+    }
+
+    async function simulate() {
+      const prompt = promptInput.value.trim();
+
+      if (!prompt) {
+        probList.innerHTML = `<div class="empty">Escribí un inicio de frase para poder simular.</div>`;
+        responseText.textContent = "La respuesta aparecerá acá, palabra por palabra.";
+        statusPill.textContent = "Sin prompt";
+        return;
+      }
+
+      simulateBtn.disabled = true;
+      regenerateBtn.disabled = true;
+      statusPill.textContent = "Analizando";
+
+      setActiveStep(0);
+      await wait(300);
+      setActiveStep(1);
+      await wait(420);
+      setActiveStep(2);
+
+      const candidates = getCandidates(prompt);
+      const picked = weightedPick(candidates);
+
+      renderProbabilities(candidates, picked.word);
+
+      await wait(650);
+      setActiveStep(3);
+      statusPill.textContent = "Generando";
+
+      const continuation = picked.continuations[Math.floor(Math.random() * picked.continuations.length)];
+      const finalText = `${prompt} ${picked.word} ${continuation}`;
+
+      await typeResponse(finalText);
+
+      statusPill.textContent = "Listo";
+      simulateBtn.disabled = false;
+      regenerateBtn.disabled = false;
+    }
+
+    document.querySelectorAll("[data-example]").forEach(button => {
+      button.addEventListener("click", () => {
+        promptInput.value = button.dataset.example;
+        simulate();
+      });
+    });
+
+    simulateBtn.addEventListener("click", simulate);
+    regenerateBtn.addEventListener("click", simulate);
+
+    clearBtn.addEventListener("click", () => {
+      promptInput.value = "";
+      probList.innerHTML = `<div class="empty">Hacé clic en <strong>Simular</strong> para ver las palabras más probables.</div>`;
+      responseText.textContent = "La respuesta aparecerá acá, palabra por palabra.";
+      statusPill.textContent = "Esperando";
+      steps.forEach(step => step.classList.remove("active"));
+      promptInput.focus();
+    });
+
+    window.addEventListener("load", () => {
+      setTimeout(simulate, 450);
+    });
+  </script>
+</body>
+
+</html>
